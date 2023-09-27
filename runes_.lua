@@ -7,12 +7,15 @@
 -- by 256k
 --.................................................................
 
+engine.name = 'PolyPerc'
+MU = require "musicutil"
+
 -- rxn3&
 local proplist = {}
 proplist[1] = 'trig'
 proplist[2] = 'note'
 proplist[3] = 'octv'
-proplist[4] = 'cdiv'
+proplist[4] = 'clkd'
 proplist[5] = 'prob'
 proplist[6] = 'dire'
 
@@ -28,7 +31,7 @@ function Step:new(stepnum)
   s.props.trig = 0
   s.props.note = 0
   s.props.octv = 0
-  s.props.cdiv = 0
+  s.props.clkd = 0
   s.props.prob = 0
   s.props.dire = 0
 
@@ -48,6 +51,19 @@ function Step:draw()
   end
 end
 
+function Step:play()
+-- play a note based on note, oct and prob
+print("play triggered")
+
+if self.props.note > 0 and self.props.octv > 0 then
+local notefreq = MU.note_num_to_freq(self.props.note + (self.props.octv * 12))
+engine.cutoff(3900)
+engine.hz(notefreq)
+end
+end
+
+
+
 -- =========================================
 
 local Track = {}
@@ -60,12 +76,11 @@ function Track:new()
   print("after setmetatable")
 
   t.step = {}
-
+  t.step_idx = 1
   for i = 1, 16 do
     t.step[i] = Step:new(i)
     -- tab.print(t.step[i])
   end
-
   return t
 end
 
@@ -81,6 +96,34 @@ function Track:draw()
   --   end
   screen.update()
 end
+
+
+function Track:step()
+  -- increment step_idx based on step's clkd, dire
+  -- step:play
+end
+
+function Track:step_inc()
+  print("step inc")
+  if self.step_idx == 16 then self.step_idx = 1 else self.step_idx = self.step_idx + 1 end
+    print("step_idx", self.step_idx)
+    self.step[self.step_idx]:play()
+  tab.print(self.step[self.step_idx])
+end
+
+function Track:run()
+clock.run(function()
+    while true do
+      clock.sync(1 / 4)
+      -- self:trigger()
+      -- redraw()
+      print("track tick")
+      self:step_inc()
+      redraw()
+    end
+  end)
+end
+
 
 -- =========================================
 
@@ -105,16 +148,16 @@ myseq = Sequencer:new()
 print("sequencer")
 tab.print(myseq)
 
-print("==============================")
+-- print("==============================")
 
-print("track 1")
-tab.print(myseq.track[1])
+-- print("track 1")
+-- tab.print(myseq.track[1])
 
-print("==============================")
+-- print("==============================")
 
 
-print("step 3")
-tab.print(myseq.track[1].step[3])
+-- print("step 3")
+-- tab.print(myseq.track[1].step[3])
 
 
 
@@ -140,25 +183,25 @@ tab.print(myseq.track[1].step[3])
 -- ===================================================
 
 
-screenmap = {
-  -- {'t','n','o','m','d','j','p','c'},
-  { '.', '0', '0', '0', '0', '0', '0', '0' },
-  { '0', '0', '0', '0', '0', '0', '0', '0' },
-  { '0', '0', '0', '0', '0', '0', '0', '0' },
-  { '0', '0', '0', '0', '0', '0', '0', '0' },
-  { '0', '0', '0', '0', '0', '0', '0', '0' },
-  { '0', '0', '0', '0', '0', '0', '0', '0' },
-  { '0', '0', '0', '0', '0', '0', '0', '0' },
-  { '0', '0', '0', '0', '0', '0', '0', '0' },
-  { '0', '0', '0', '0', '0', '0', '0', '0' },
-  { '0', '0', '0', '0', '0', '0', '0', '0' },
-  { '0', '0', '0', '0', '0', '0', '0', '0' },
-  { '0', '0', '0', '0', '0', '0', '0', '0' },
-  { '0', '0', '0', '0', '0', '0', '0', '0' },
-  { '0', '0', '0', '0', '0', '0', '0', '0' },
-  { '0', '0', '0', '0', '0', '0', '0', '0' },
-  { '0', '0', '0', '0', '0', '0', '0', '0' },
-};
+-- screenmap = {
+--   -- {'t','n','o','m','d','j','p','c'},
+--   { '.', '0', '0', '0', '0', '0', '0', '0' },
+--   { '0', '0', '0', '0', '0', '0', '0', '0' },
+--   { '0', '0', '0', '0', '0', '0', '0', '0' },
+--   { '0', '0', '0', '0', '0', '0', '0', '0' },
+--   { '0', '0', '0', '0', '0', '0', '0', '0' },
+--   { '0', '0', '0', '0', '0', '0', '0', '0' },
+--   { '0', '0', '0', '0', '0', '0', '0', '0' },
+--   { '0', '0', '0', '0', '0', '0', '0', '0' },
+--   { '0', '0', '0', '0', '0', '0', '0', '0' },
+--   { '0', '0', '0', '0', '0', '0', '0', '0' },
+--   { '0', '0', '0', '0', '0', '0', '0', '0' },
+--   { '0', '0', '0', '0', '0', '0', '0', '0' },
+--   { '0', '0', '0', '0', '0', '0', '0', '0' },
+--   { '0', '0', '0', '0', '0', '0', '0', '0' },
+--   { '0', '0', '0', '0', '0', '0', '0', '0' },
+--   { '0', '0', '0', '0', '0', '0', '0', '0' },
+-- };
 
 -- define what each step of the sequencer has:
 -- trigger
@@ -172,7 +215,7 @@ screenmap = {
 -- each step will have a different value mapping for the 16 hex values based on the parameter
 --
 
-stepval = { '0', '1', '2', '3', '4', 'x' }
+-- stepval = { '0', '1', '2', '3', '4', 'x' }
 
 -- define global variables:
 cursorX = 1
@@ -184,20 +227,20 @@ stepSelector = 0
 
 
 function init()
-  -- redraw()
-  clock.run(function() -- redraw the screen and grid at 15fps
-    while true do
-      clock.sleep(1 / 15)
-      redraw()
-    end
-  end)
+  redraw()
+  -- clock.run(function() -- redraw the screen and grid at 15fps
+  --   while true do
+  --     clock.sleep(1 / 15)
+  --     redraw()
+  --   end
+  -- end)
 
-  clock.run(function()
-    while true do
-      clock.sleep(1 / 4)
-      step_inc()
-    end
-  end)
+--   clock.run(function()
+--     while true do
+--       clock.sleep(1 / 4)
+--       step_inc()
+--     end
+--   end)
 end
 
 function hex(val)
@@ -205,13 +248,9 @@ function hex(val)
   return string.format("%x", val)
 end
 
-local testvar = 10
-local hexvar = hex(10)
--- print(testvar)
--- print(hexvar)
 
 local track = Track:new()
-
+track:run()
 
 
 
@@ -222,17 +261,21 @@ local track = Track:new()
 
 
 -- =============== SCREEN DRAWING: ======================
+
+
+
+
 function redraw()
   screen.clear()
 
   for yi = 1, 16 do
-    if yi == stepSelector then screen.level(15) else screen.level(1) end
+    if yi == track.step_idx then screen.level(15) else screen.level(1) end
     for xi = 1, 6 do
       local screen_char = hex(track.step[yi].props[proplist[xi]])
       -- screen.level(1)
       screen.move(yi * 7 + 4, xi * 7 + 8)
       screen.text_center(screen_char)
-      if xi == cursorX and yi == cursorY and stepSelector ~= yi then
+      if xi == cursorX and yi == cursorY and track.step_idx ~= yi then
         screen.move(yi * 7 + 4, xi * 7 + 8)
         screen.level(15)
         screen.text_center(screen_char)
@@ -262,14 +305,14 @@ function enc(n, d)
   if n == 3 then cursorY = util.clamp(cursorY + d, 1, 16) end
 end
 
-function step_inc()
-  if stepSelector == 16 then
-    stepSelector = 1
-  else
-    stepSelector = stepSelector + 1
-    -- play this step
-  end
-end
+-- function step_inc()
+--   if track.step_idx == 16 then
+--     track.step_idx = 1
+--   else
+--     track.step_idx = stepSelector + 1
+--     -- play this step
+--   end
+-- end
 
 function key(n, z)
   if n == 1 and z ==1 then
@@ -289,8 +332,8 @@ end
 function randomize_track(track)
   for i = 1, #track.step do
     for y = 1, #proplist do
-      if math.random(1,5) == 3 then
-        track.step[i].props[proplist[y]] = math.random(0,5)
+      if math.random(1,15) == 3 then
+        track.step[i].props[proplist[y]] = math.random(0,15)
       end
     end
   end
