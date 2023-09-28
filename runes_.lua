@@ -94,10 +94,10 @@ function Track:draw()
       if xi == cursorX and yi == cursorY and self.step_idx ~= yi then
         
         screen.level(15)
-        screen.fill()
-        screen.rect(yi * 7 + 1 , xi * 7 +2, 7, 7)
+        -- screen.fill()
+        -- screen.rect(yi * 7 + 1 , xi * 7 +2, 7, 7)
         screen.move(yi * 7 + 4, xi * 7 + 8)
-        screen.blend_mode(1)
+        -- screen.blend_mode(1)
         screen.text_center(screen_char)
         
         screen.level(1)
