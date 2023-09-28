@@ -43,7 +43,7 @@ function Step:new(stepnum)
 end
 
 function Step:draw()
-  print(self.props.trig)
+  -- print(self.props.trig)
   screen.move(0 + self._idx * 8, 10)
   for k, v in pairs(self.props) do
     screen.text(hex(v))
@@ -53,7 +53,7 @@ end
 
 function Step:play()
 -- play a note based on note, oct and prob
-print("play triggered")
+-- print("play triggered")
 
 if self.props.note > 0 and self.props.octv > 0 then
 local notefreq = MU.note_num_to_freq(self.props.note + (self.props.octv * 12))
@@ -68,15 +68,14 @@ end
 
 local Track = {}
 
-function Track:new()
-  print("[[[[[[new track]]]]]]]")
+function Track:new(trackid)
   local t = setmetatable({}, {
     __index = Track
   })
-  print("after setmetatable")
 
   t.step = {}
   t.step_idx = 1
+  t.trackid = trackid or 1
   for i = 1, 16 do
     t.step[i] = Step:new(i)
     -- tab.print(t.step[i])
@@ -85,16 +84,26 @@ function Track:new()
 end
 
 function Track:draw()
-  print("track draw")
-  for i = 1, #self.step do
-    print("index", i)
-    print(self.step[i]:draw())
+  for yi = 1, 16 do
+    if yi == self.step_idx then screen.level(15) else screen.level(1) end
+    for xi = 1, 6 do
+      local screen_char = hex(self.step[yi].props[proplist[xi]])
+      -- screen.level(1)
+      screen.move(yi * 7 + 4, xi * 7 + 8)
+      screen.text_center(screen_char)
+      if xi == cursorX and yi == cursorY and self.step_idx ~= yi then
+        
+        screen.level(15)
+        screen.fill()
+        screen.rect(yi * 7 + 1 , xi * 7 +2, 7, 7)
+        screen.move(yi * 7 + 4, xi * 7 + 8)
+        screen.blend_mode(1)
+        screen.text_center(screen_char)
+        
+        screen.level(1)
+      end
+    end
   end
-  -- for i = 1, #self.props do
-  --   screen.move_rel(0, 10)
-  --   screen.text_center(hex(self[i]))
-  --   end
-  screen.update()
 end
 
 
@@ -104,11 +113,11 @@ function Track:step()
 end
 
 function Track:step_inc()
-  print("step inc")
+  -- print("step inc", self.trackid) 
   if self.step_idx == 16 then self.step_idx = 1 else self.step_idx = self.step_idx + 1 end
-    print("step_idx", self.step_idx)
+    -- print("step_idx", self.step_idx)
     self.step[self.step_idx]:play()
-  tab.print(self.step[self.step_idx])
+  -- tab.print(self.step[self.step_idx])
 end
 
 function Track:run()
@@ -117,11 +126,31 @@ clock.run(function()
       clock.sync(1 / 4)
       -- self:trigger()
       -- redraw()
-      print("track tick")
+      -- print("track tick")
       self:step_inc()
       redraw()
     end
   end)
+end
+
+function Track:randomize()
+  for i = 1, #self.step do
+    for k,v in pairs(self.step[i].props) do
+        if math.random(1,10) == 3 then
+          self.step[i].props[k] = math.random(0,15)
+        end
+    end
+  end
+end
+
+function Track:clear()
+  for i = 1, #self.step do
+    for k,v in pairs(self.step[i].props) do
+        
+          self.step[i].props[k] = 0
+      
+    end
+  end
 end
 
 
@@ -131,22 +160,31 @@ end
 
 local Sequencer = {}
 
-function Sequencer:new()
+function Sequencer:new(tracknum)
   local sq = setmetatable({}, {
     __index = Sequencer
   })
 
   sq.track = {}
 
-  sq.track[1] = Track:new()
+  for i = 1, tracknum or 1 do
+  sq.track[i] = Track:new(i)  
+  end
+  
 
   return sq
 end
 
-myseq = Sequencer:new()
+function Sequencer:run()
+  for i = 1, #self.track do
+     self.track[i]:run()
+  end
+end
 
-print("sequencer")
-tab.print(myseq)
+-- myseq = Sequencer:new()
+
+-- print("sequencer")
+-- tab.print(myseq)
 
 -- print("==============================")
 
@@ -218,12 +256,20 @@ tab.print(myseq)
 -- stepval = { '0', '1', '2', '3', '4', 'x' }
 
 -- define global variables:
+
+
+
+
+
+
+
 cursorX = 1
 cursorY = 1
 mod1 = 0
 mod2 = 0
 charSelector = 0
 stepSelector = 0
+trackSelector = 1
 
 
 function init()
@@ -243,14 +289,19 @@ function init()
 --   end)
 end
 
+
+-- init new sequencer with 5 tracks
+local MASTER = Sequencer:new(5)
+MASTER:run()
+
 function hex(val)
   if val == 0 then return "." end
   return string.format("%x", val)
 end
 
 
-local track = Track:new()
-track:run()
+-- local track = Track:new()
+-- track:run()
 
 
 
@@ -267,22 +318,23 @@ track:run()
 
 function redraw()
   screen.clear()
-
-  for yi = 1, 16 do
-    if yi == track.step_idx then screen.level(15) else screen.level(1) end
-    for xi = 1, 6 do
-      local screen_char = hex(track.step[yi].props[proplist[xi]])
-      -- screen.level(1)
-      screen.move(yi * 7 + 4, xi * 7 + 8)
-      screen.text_center(screen_char)
-      if xi == cursorX and yi == cursorY and track.step_idx ~= yi then
-        screen.move(yi * 7 + 4, xi * 7 + 8)
-        screen.level(15)
-        screen.text_center(screen_char)
-        screen.level(1)
-      end
-    end
-  end
+  draw_track_id()
+  MASTER.track[trackSelector]:draw()
+  -- for yi = 1, 16 do
+  --   if yi == track.step_idx then screen.level(15) else screen.level(1) end
+  --   for xi = 1, 6 do
+  --     local screen_char = hex(track.step[yi].props[proplist[xi]])
+  --     -- screen.level(1)
+  --     screen.move(yi * 7 + 4, xi * 7 + 8)
+  --     screen.text_center(screen_char)
+  --     if xi == cursorX and yi == cursorY and track.step_idx ~= yi then
+  --       screen.move(yi * 7 + 4, xi * 7 + 8)
+  --       screen.level(15)
+  --       screen.text_center(screen_char)
+  --       screen.level(1)
+  --     end
+  --   end
+  -- end
 
   screen.update()
 end
@@ -291,18 +343,29 @@ end
 
 
 function enc(n, d)
+  redraw()
   -- vertical
   if n == 2 then
     if mod1 == 0 then
       cursorX = util.clamp(cursorX + d, 1, 6)
     else
       charSelector = util.clamp(charSelector + d, 0, 15)
-      track.step[cursorY].props[proplist[cursorX]] = charSelector
+      MASTER.track[trackSelector].step[cursorY].props[proplist[cursorX]] = charSelector
     end
   end
 
   -- horizontal
   if n == 3 then cursorY = util.clamp(cursorY + d, 1, 16) end
+  
+  
+  if n == 1 then 
+    trackSelector = (util.clamp(trackSelector + d, 1, #MASTER.track)) 
+    
+    redraw()
+  end
+
+
+
 end
 
 -- function step_inc()
@@ -316,7 +379,10 @@ end
 
 function key(n, z)
   if n == 1 and z ==1 then
-    if mod1 == 1 then clear_track(track) else randomize_track(track)  end
+    print("=========MASTER.track[trackSelector]========")
+  tab.print(MASTER.track[trackSelector])
+  print("----------------------")
+    if mod1 == 1 then MASTER.track[trackSelector]:clear() else MASTER.track[trackSelector]:randomize()  end
   end
   
   if n == 2 and z == 1 then
@@ -328,23 +394,39 @@ function key(n, z)
 end
 
 
+-- i need to make as much as i can the functions be pure functions like these ones. 
+-- they dont know anything about the master track. but we'll see later.
+-- right now im just speedrunning through the core functionality
 
 function randomize_track(track)
+  print("=========track========")
+  tab.print(tarck)
+  print("----------------------")
   for i = 1, #track.step do
-    for y = 1, #proplist do
-      if math.random(1,15) == 3 then
-        track.step[i].props[proplist[y]] = math.random(0,15)
-      end
-    end
+  for k,v in pairs(track.step.props) do
+    
+  
+  --   for y = 1, #proplist do
+  --     if math.random(1,15) == 3 then
+  track[trackSelector].step[i].props[k] = math.random(0,15)
+  --     end
+  --   end
+  end
   end
 end
 
 function clear_track(track)
   for i = 1, #track.step do
     for y = 1, #proplist do
-        track.step[i].props[proplist[y]] = 0
+  track[trackSelector].step[i].props[proplist[y]] = 0
       end
     end
-  end
+end
+
+function draw_track_id()
+screen.move(4 , 10)
+screen.text_center(MASTER.track[trackSelector].trackid)
+end
+
 
 
