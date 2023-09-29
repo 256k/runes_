@@ -6,6 +6,22 @@
 --
 -- by 256k
 --.................................................................
+--
+--
+--
+--
+--
+--                      hello
+--
+--
+--
+--
+--
+--
+--
+--
+--.................................................................
+
 
 engine.name = 'PolyPerc'
 MU = require "musicutil"
@@ -29,10 +45,10 @@ function Step:new(stepnum)
   s.props = {}
 
   s.props.trig = 0
-  s.props.note = 0
-  s.props.octv = 0
+  s.props.note = 1
+  s.props.octv = 5
   s.props.clkd = 0
-  s.props.prob = 0
+  s.props.prob = 1
   s.props.dire = 0
 
   -- extra props
@@ -53,7 +69,7 @@ end
 
 function Step:play()
 -- play a note based on note, oct and prob
--- print("play triggered")
+-- print("play triggered", self.props.prob)
 
 if self.props.note > 0 and self.props.octv > 0 then
 local notefreq = MU.note_num_to_freq(self.props.note + (self.props.octv * 12))
@@ -116,7 +132,17 @@ function Track:step_inc()
   -- print("step inc", self.trackid) 
   if self.step_idx == 16 then self.step_idx = 1 else self.step_idx = self.step_idx + 1 end
     -- print("step_idx", self.step_idx)
+    local step_prob = (100 / 15 * self.step[self.step_idx].props.prob ) 
+    local chance = math.random(1,100)
+   
+          print("step calculated place", self.step[self.step_idx].props.prob)
+
+    if (step_prob)  > chance then
+
+       print("step_prob", step_prob)
+    print("chance", chance)
     self.step[self.step_idx]:play()
+    end
   -- tab.print(self.step[self.step_idx])
 end
 
@@ -351,6 +377,8 @@ function enc(n, d)
     else
       charSelector = util.clamp(charSelector + d, 0, 15)
       MASTER.track[trackSelector].step[cursorY].props[proplist[cursorX]] = charSelector
+      print("proplist" , proplist[cursorX])
+      tab.print(MASTER.track[trackSelector].step[cursorY].props)
     end
   end
 
