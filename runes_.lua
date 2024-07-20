@@ -27,6 +27,7 @@ engine.name = 'PolyPerc'
 MU = require "musicutil"
 local nb = require "nb/lib/nb"
 
+
 note_array = MU.generate_scale_of_length (1, "major", 16) 
 -- rxn3&
 local proplist = {}
@@ -45,13 +46,13 @@ function Step:new(stepnum)
     __index = Step
   })
   s.props = {}
-
-  s.props.trig = 0
-  s.props.note = 1
-  s.props.octv = 5
-  s.props.clkd = 0
-  s.props.prob = 0
-  s.props.dire = 0
+print("init  rerun?")
+  s.props.trig = 0 -- step number to jump to
+  s.props.note = 0 -- note to play 
+  s.props.octv = 4 -- octave of note
+  s.props.clkd = 4 -- clock division
+  s.props.prob = 15 -- step probability of triggering
+  s.props.dire = 0 -- direction of sequence // unimplemented
 
   -- extra props
   s._idx = stepnum
@@ -79,13 +80,20 @@ function Step:play()
     local total_note = note + octv
     print("octv", octv)
     print("note", total_note)
-    local player = params:lookup_param("voice_id"):get_player()
-    player:play_note(total_note, 0.8, 0.2)
+    -- print("clock div: ", self.props.clkd)
+    
+    -- local player = params:lookup_param("voice_id"):get_player()
+    -- player:play_note(total_note, 0.8, 0.2)
 
--- local notefreq = MU.note_num_to_freq(note + (self.props.octv * 12))
--- engine.cutoff(3900)
--- engine.hz(notefreq)
-end
+    local notefreq = MU.note_num_to_freq(total_note)
+        -- local notefreq = MU.note_num_to_freq(util.clamp(total_note, 1, 100))
+
+    print("notefreq", notefreq)
+    engine.cutoff(3900)
+    engine.hz(notefreq)
+    engine.release(0.3)
+    print("i played", self._idx)
+  end
 end
 
 
@@ -103,7 +111,7 @@ function Track:new(trackid)
   t.step_idx = 1
   t.trackid = trackid or 1
   t.clock = 0
-  for i = 1, 16 do
+  for i = 1, 16 do -- track length
     t.step[i] = Step:new(i)
     -- tab.print(t.step[i])
   end
@@ -112,22 +120,18 @@ end
 
 function Track:draw()
   for yi = 1, 16 do
-    if yi == self.step_idx then screen.level(15) else screen.level(1) end
+    if yi == self.step_idx  then screen.level(15) else screen.level(1) end
     for xi = 1, 6 do
+      if (xi > 0 and yi > 0) then
       local screen_char = hex(self.step[yi].props[proplist[xi]])
-      -- screen.level(1)
       screen.move(yi * 7 + 4, xi * 7 + 8)
       screen.text_center(screen_char)
-      if xi == cursorX and yi == cursorY and self.step_idx ~= yi then
-        
+      if xi == cursorX and yi == cursorY and self.step_idx ~= yi then -- this is for cursor
         screen.level(15)
-        -- screen.fill()
-        -- screen.rect(yi * 7 + 1 , xi * 7 +2, 7, 7)
         screen.move(yi * 7 + 4, xi * 7 + 8)
-        -- screen.blend_mode(1)
         screen.text_center(screen_char)
-        
         screen.level(1)
+      end
       end
     end
   end
@@ -140,16 +144,19 @@ function Track:step()
 end
 
 function Track:step_inc()
+  print("step_inc")
   local step_prob = ((100 / 15) * self.step[self.step_idx].props.prob ) 
   local chance = math.random(1,100)
+  
   local hopp_step = self.step[self.step_idx].props.trig
   
   if (step_prob)  > chance then
-    print("step works")
-    print("step prob: ", step_prob)
-    print("chance: ", chance)
+    -- print("step works")
+    -- print("step prob: ", step_prob)
+    -- print("chance: ", chance)
     
-    print("step index after set", self.step_idx)
+    -- print("step index after set", self.step_idx)
+    print("step index: ", self.step_idx)
     self.step[self.step_idx]:play()
     if hopp_step > 0 then self.step_idx = hopp_step end
   end
@@ -159,13 +166,16 @@ end
 
 function Track:run()
 self.clock = clock.run(function()
+  local clockdiv = self.step[self.step_idx].props.clkd
+  
     while true do
-      clock.sync(1 / 4)
-      -- self:trigger()
-      -- redraw()
-      -- print("track tick")
-      self:step_inc()
+      if clockdiv ~= 0 then clockdiv = self.step[self.step_idx].props.clkd end
+      -- print("clock div inside clock: ", clockdiv)
+      clock.sync((1/16) * clockdiv)
       redraw()
+      self:step_inc()
+      
+      
     end
   end)
 end
@@ -289,7 +299,8 @@ end
 
 
 -- init new sequencer with 5 tracks
-local MASTER = Sequencer:new(5)
+local MASTER = Sequencer:new(1)
+MASTER.track[1].step[1].props.note = 5
 MASTER:run()
 
 function hex(val)
@@ -314,7 +325,7 @@ function enc(n, d)
   -- vertical
   if n == 2 then
     if mod1 == 0 then
-      cursorX = util.clamp(cursorX + d, 1, 6)
+      cursorX = util.clamp(cursorX + (d / 2), 1, 6)
     else
       charSelector = util.clamp(charSelector + d, 0, 15)
       MASTER.track[trackSelector].step[cursorY].props[proplist[cursorX]] = charSelector
@@ -324,7 +335,9 @@ function enc(n, d)
   end
 
   -- horizontal
-  if n == 3 then cursorY = util.clamp(cursorY + d, 1, 16) end
+  if n == 3 then cursorY = util.clamp(cursorY + d, 1, 16) 
+    redraw()
+    end
   
   
   if n == 1 then 
