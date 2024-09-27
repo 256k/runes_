@@ -25,10 +25,11 @@
 
 engine.name = 'PolyPerc'
 MU = require "musicutil"
-local nb = require "nb/lib/nb"
+local nb = require "runes_/lib/nb/lib/nb"
 
+local debug_interator = 1
 
-note_array = MU.generate_scale_of_length (1, "major", 16) 
+note_array = MU.generate_scale_of_length (1, "dorian", 16) 
 -- rxn3&
 local proplist = {}
 proplist[1] = 'trig'
@@ -46,10 +47,10 @@ function Step:new(stepnum)
     __index = Step
   })
   s.props = {}
-print("init  rerun?")
+-- print("init  rerun?")
   s.props.trig = 0 -- step number to jump to
   s.props.note = 0 -- note to play 
-  s.props.octv = 4 -- octave of note
+  s.props.octv = 2 -- octave of note
   s.props.clkd = 4 -- clock division
   s.props.prob = 15 -- step probability of triggering
   s.props.dire = 0 -- direction of sequence // unimplemented
@@ -62,7 +63,7 @@ print("init  rerun?")
 end
 
 function Step:draw()
-  -- print(self.props.trign)
+  -- -- print(self.props.trign)
   screen.move(0 + self._idx * 8, 10)
   for k, v in pairs(self.props) do
     screen.text(hex(v))
@@ -72,15 +73,15 @@ end
 
 function Step:play()
 -- play a note based on note, oct and prob
--- print("play triggered", self.props.prob)
+-- -- print("play triggered", self.props.prob)
 
   if self.props.note > 0 and self.props.octv > 0 then
     local note = note_array[self.props.note]
-    local octv = self.props.octv * 12
+    local octv = self.props.octv * 12 
     local total_note = note + octv
-    print("octv", octv)
-    print("note", total_note)
-    -- print("clock div: ", self.props.clkd)
+    -- print("octv", octv)
+    -- print("note", total_note)
+    -- -- print("clock div: ", self.props.clkd)
     
     -- local player = params:lookup_param("voice_id"):get_player()
     -- player:play_note(total_note, 0.8, 0.2)
@@ -88,13 +89,17 @@ function Step:play()
     local notefreq = MU.note_num_to_freq(total_note)
         -- local notefreq = MU.note_num_to_freq(util.clamp(total_note, 1, 100))
 
-    print("notefreq", notefreq)
-    engine.cutoff(3900)
-    engine.hz(notefreq)
-    engine.release(0.3)
-    print("i played", self._idx)
+    -- print("notefreq", notefreq)
+    -- engine.cutoff(3900)
+    -- engine.hz(notefreq)
+    -- engine.release(0.3)
+
+    local player = params:lookup_param("voice_id"):get_player()
+        player:note_on(notefreq, 1)
+    end
+    -- print("i played", self._idx)
   end
-end
+
 
 
 
@@ -113,12 +118,13 @@ function Track:new(trackid)
   t.clock = 0
   for i = 1, 16 do -- track length
     t.step[i] = Step:new(i)
-    -- tab.print(t.step[i])
+    -- -- tab.-- print(t.step[i])
   end
   return t
 end
 
 function Track:draw()
+  -- print("i am drawing track: ", self.trackid)
   for yi = 1, 16 do
     if yi == self.step_idx  then screen.level(15) else screen.level(1) end
     for xi = 1, 6 do
@@ -144,24 +150,32 @@ function Track:step()
 end
 
 function Track:step_inc()
-  print("step_inc")
+  -- print("step_inc")
   local step_prob = ((100 / 15) * self.step[self.step_idx].props.prob ) 
   local chance = math.random(1,100)
   
   local hopp_step = self.step[self.step_idx].props.trig
   
   if (step_prob)  > chance then
-    -- print("step works")
-    -- print("step prob: ", step_prob)
-    -- print("chance: ", chance)
+    -- -- print("step works")
+    -- -- print("step prob: ", step_prob)
+    -- -- print("chance: ", chance)
     
-    -- print("step index after set", self.step_idx)
-    print("step index: ", self.step_idx)
+    -- -- print("step index after set", self.step_idx)
+    -- print("step index: ", self.step_idx)
     self.step[self.step_idx]:play()
     if hopp_step > 0 then self.step_idx = hopp_step end
   end
   
-  if self.step_idx == 16 then self.step_idx = 1 else self.step_idx = self.step_idx + 1 end
+  if self.step_idx == 16 then self.step_idx = 1 else
+
+     if self.step[self.step_idx].props.dire > 9 then
+	print("dire? ", self.step[self.step_idx].props.dire)
+	self.step_idx = self.step_idx - 1
+	else
+	   self.step_idx = self.step_idx + 1
+	end
+  end
 end
 
 function Track:run()
@@ -170,7 +184,7 @@ self.clock = clock.run(function()
   
     while true do
       if clockdiv ~= 0 then clockdiv = self.step[self.step_idx].props.clkd end
-      -- print("clock div inside clock: ", clockdiv)
+      -- -- print("clock div inside clock: ", clockdiv)
       clock.sync((1/16) * clockdiv)
       redraw()
       self:step_inc()
@@ -183,8 +197,14 @@ end
 function Track:randomize()
   for i = 1, #self.step do
     for k,v in pairs(self.step[i].props) do
-        -- if math.random(1,10) == 3 then
-          self.step[i].props[k] = math.random(0,15)
+        -- if math.random(4,10) == 3 then
+
+if k ~= 'clkd' then
+  print("kkk", k)
+          self.step[i].props[k] = math.random(3,5)
+          
+end
+        print("result",k, self.step[i].props[k])
         -- end
     end
   end
@@ -203,7 +223,6 @@ end
 function Track:pause()
 clock.cancel(self.clock)  
 end
-
 
 -- =========================================
 
@@ -298,9 +317,12 @@ function init()
 end
 
 
--- init new sequencer with 5 tracks
-local MASTER = Sequencer:new(1)
-MASTER.track[1].step[1].props.note = 5
+-- init new sequencer with 4 tracks
+local MASTER
+
+for i = 1, 4 do
+MASTER = Sequencer:new(i)
+end
 MASTER:run()
 
 function hex(val)
@@ -311,6 +333,9 @@ end
 -- =============== SCREEN DRAWING: ======================
 
 function redraw()
+  -- print("redraw triggered x times: ", debug_interator)
+  debug_interator = debug_interator + 1
+  
   screen.clear()
   draw_track_id()
   MASTER.track[trackSelector]:draw()
@@ -320,41 +345,13 @@ end
 -- =====================================
 
 
-function enc(n, d)
-  redraw()
-  -- vertical
-  if n == 2 then
-    if mod1 == 0 then
-      cursorX = util.clamp(cursorX + (d / 2), 1, 6)
-    else
-      charSelector = util.clamp(charSelector + d, 0, 15)
-      MASTER.track[trackSelector].step[cursorY].props[proplist[cursorX]] = charSelector
-      print("proplist" , proplist[cursorX])
-      tab.print(MASTER.track[trackSelector].step[cursorY].props)
-    end
-  end
 
-  -- horizontal
-  if n == 3 then cursorY = util.clamp(cursorY + d, 1, 16) 
-    redraw()
-    end
-  
-  
-  if n == 1 then 
-    trackSelector = (util.clamp(trackSelector + d, 1, #MASTER.track)) 
-    
-    redraw()
-  end
-
-
-
-end
 
 function key(n, z)
   if n == 1 and z ==1 then
-  --   print("=========MASTER.track[trackSelector]========")
-  -- tab.print(MASTER.track[trackSelector])
-  -- print("----------------------")
+  --   -- print("=========MASTER.track[trackSelector]========")
+  -- -- tab.-- print(MASTER.track[trackSelector])
+  -- -- print("----------------------")
     if mod1 == 1 then MASTER.track[trackSelector]:clear() else MASTER.track[trackSelector]:randomize()  end
   end
   
@@ -372,13 +369,72 @@ function key(n, z)
 end
 
 
+function moveCharVertical(inc)
+   cursorX = util.clamp(cursorX + inc, 1, 6)
+end
+
+function moveCharHorizontal(inc)
+   cursorY = util.clamp(cursorY + inc, 1, 16)
+end
+
+function keyboard.code(key,value)
+
+   if key == "UP" then
+      moveCharVertical(value * -1)
+   else if key == "DOWN" then
+	 moveCharVertical(value )
+   else if key == "LEFT" then
+	 moveCharHorizontal(value * -1)
+   else if key == "RIGHT" then
+	 moveCharHorizontal(value )
+   end
+   end
+   end
+   end
+   redraw()
+   
+   -- vertical
+   -- 	 moveCharHorizontal(key, value)
+   
+   --   end
+   -- end
+
+  end
+
+function enc(n, d)
+    if mod1 == 1 then
+    changeStepValue(d)
+    return
+    end
+
+    -- vertical
+    if n == 2 then
+	 moveCharVertical(d)
+    end
+    -- horizontal
+    if n == 3 then
+	 moveCharHorizontal(d)
+    end
+    -- change tracks
+    if n == 1 then 
+       trackSelector = (util.clamp(trackSelector + d, 1, #MASTER.track)) 
+    end
+    redraw()
+end
+
+
+function changeStepValue(d)
+   charSelector = util.clamp(charSelector + d, 0, 15)
+   MASTER.track[trackSelector].step[cursorY].props[proplist[cursorX]] = charSelector
+end
+
 -- i need to make as much as i can the functions be pure functions like these ones. 
 -- they dont know anything about the master track. but we'll see later.
 -- right now im just speedrunning through the core functionality
 
 function randomize_track(track)
-  print("=========track========")
-  tab.print(tarck)
+  -- print("=========track========")
+  -- tab.-- print(tarck)
   print("----------------------")
   for i = 1, #track.step do
   for k,v in pairs(track.step.props) do
@@ -386,7 +442,10 @@ function randomize_track(track)
   
   --   for y = 1, #proplist do
   --     if math.random(1,15) == 3 then
+
+    print("k", k)
   track[trackSelector].step[i].props[k] = math.random(0,15)
+
   --     end
   --   end
   end
@@ -402,6 +461,7 @@ function clear_track(track)
 end
 
 function draw_track_id()
+  -- print("trackselector", trackSelector)
 screen.move(4 , 10)
 screen.level(1)
 screen.text_center(MASTER.track[trackSelector].trackid)
