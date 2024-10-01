@@ -186,7 +186,8 @@ self.clock = clock.run(function()
       if clockdiv ~= 0 then clockdiv = self.step[self.step_idx].props.clkd end
       -- -- print("clock div inside clock: ", clockdiv)
       clock.sync((1/16) * clockdiv)
-      redraw()
+      -- redraw()
+      -- screen.update()
       self:step_inc()
       
       
@@ -313,6 +314,10 @@ function init()
   nb:init()
   nb:add_param("voice_id", "voice")
   nb:add_player_params()
+  -- redraw()
+end
+
+function refresh()
   redraw()
 end
 
@@ -391,7 +396,8 @@ function keyboard.code(key,value)
    end
    end
    end
-   redraw()
+  -- redraw()
+  -- screen.update()
    
    -- vertical
    -- 	 moveCharHorizontal(key, value)
@@ -419,7 +425,8 @@ function enc(n, d)
     if n == 1 then 
        trackSelector = (util.clamp(trackSelector + d, 1, #MASTER.track)) 
     end
-    redraw()
+    -- redraw()
+    -- screen.update()
 end
 
 
