@@ -10,17 +10,24 @@ runes step values:
 ------------------
 
 1- trig -- next step index
+
 2- note -- note
+
 3- octv -- octave
+
 4- clkd -- clock division
+
 5- prob -- probability
+
 6- dire -- direction (might change)
 
 the layout
 ----------
 
 2 views: 
+
 1- overview
+
 2- step view
 
 overview:
