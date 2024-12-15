@@ -26,6 +26,8 @@
 engine.name = 'PolyPerc'
 MU = require "musicutil"
 local nb = require "runes_/lib/nb/lib/nb"
+local n16 = midi.connect()
+tab.print(n16)
 
 local debug_interator = 1
 
@@ -308,6 +310,7 @@ mod2 = 0
 charSelector = 0
 stepSelector = 0
 trackSelector = 1
+rowSelector = 1
 
 
 function init()
@@ -368,7 +371,7 @@ function key(n, z)
   end
   
   if n == 3 and z == 1 then
-  MASTER.track[trackSelector]:pause()
+  -- MASTER.track[trackSelector]:pause()
   end
   
 end
@@ -475,4 +478,20 @@ screen.text_center(MASTER.track[trackSelector].trackid)
 end
 
 
+function n16.event(e)
+	-- event is a list of 3 values:
+	-- 1: unsure midi channel (starting from 176 for ch1)
+	-- 2: CC number
+	-- 3: value
+	tab.print(e)
+	local n16idx = e[2]-31 -- 16nx CCs count up from 32
+	local n16val = e[3]
+	
+print("16n slider index: ", n16idx)
+
+charSelector = util.clamp((n16val // 8), 0, 15)
+   MASTER.track[trackSelector].step[n16idx].props[proplist[cursorX]] = charSelector
+
+
+end
 
