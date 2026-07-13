@@ -28,6 +28,7 @@ MU = require "musicutil"
 local nb = require "runes_/lib/nb/lib/nb"
 
 local debug_interator = 1
+local step_inc = 1
 
 note_array = MU.generate_scale_of_length (1, "dorian", 16) 
 -- rxn3&
@@ -165,18 +166,26 @@ function Track:step_inc()
     -- print("step index: ", self.step_idx)
     self.step[self.step_idx]:play()
     if hopp_step > 0 then self.step_idx = hopp_step end
-  end
   
-  if self.step_idx == 16 then self.step_idx = 1 else
+  
+  -- TODO: this isn't working when the playhead direction is reversed (step_inc = -1)
+  if self.step_idx == 16 then 
+    self.step_idx = 1
+  elseif self.step_idx == 0 then 
+    self.step_idx = 15 
+  end
 
      if self.step[self.step_idx].props.dire > 9 then
 	print("dire? ", self.step[self.step_idx].props.dire)
-	self.step_idx = self.step_idx - 1
-	else
-	   self.step_idx = self.step_idx + 1
+	step_inc = -1 elseif self.step[self.step_idx].props.dire > 0 and self.step[self.step_idx].props.dire < 9 then step_inc = 1
 	end
   end
+	   self.step_idx = self.step_idx + step_inc
 end
+
+-- NOTE TODO: fix the step_idx issue when wrapping around relating to the stepping direction.
+-- lua:193: attempt to index a nil value (field '?')
+-- find a more robust wrapping solution for the stepping functionality. 
 
 function Track:run()
 self.clock = clock.run(function()
@@ -368,7 +377,8 @@ function key(n, z)
   end
   
   if n == 3 and z == 1 then
-  MASTER.track[trackSelector]:pause()
+  -- disableling this
+  -- MASTER.track[trackSelector]:pause()
   end
   
 end
